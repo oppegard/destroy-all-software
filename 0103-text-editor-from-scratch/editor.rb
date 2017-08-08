@@ -8,8 +8,9 @@ class Editor
       line.sub(/\n$/, "")
     end
 
-    @buffer = Buffer.new(lines)
-    @cursor = Cursor.new
+    @buffer  = Buffer.new(lines)
+    @cursor  = Cursor.new
+    @history = []
   end
 
   def run
@@ -44,17 +45,32 @@ class Editor
       @cursor = @cursor.left(@buffer)
     when "\C-f" then
       @cursor = @cursor.right(@buffer)
+    when "\C-u" then # Undo
+      restore_snapshot
     when "\r" # Carriage return
+      save_snapshot
       @buffer = @buffer.split_line(@cursor.row, @cursor.col)
       @cursor = @cursor.down(@buffer).move_to_col(0)
     when 127.chr # Delete
+      save_snapshot
       if @cursor.col > 0
         @buffer = @buffer.delete(@cursor.row, @cursor.col - 1)
         @cursor = @cursor.left(@buffer)
       end
     else
+      save_snapshot
       @buffer = @buffer.insert(char, @cursor.row, @cursor.col)
       @cursor = @cursor.right(@buffer)
+    end
+  end
+
+  def save_snapshot
+    @history << [@buffer, @cursor]
+  end
+
+  def restore_snapshot
+    if @history.length > 0
+      @buffer, @cursor = @history.pop
     end
   end
 end
